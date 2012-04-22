@@ -15,6 +15,7 @@ class OmchanEnv
 		i = 0
 		rhy = rand(20)
 		fgt = Integer(normRand(30, 30))
+		upd = 60
 		Thread.start do
 			loop do
 				hear
@@ -32,6 +33,11 @@ class OmchanEnv
 					fgt = Integer(normRand(30, 30))
 				end
 				fgt -= 1
+				
+				if upd == 0
+					@omchan.updateCache
+					upd = 60
+				end
 				
 				i += 1
 				i = 0 if i == 1
@@ -126,6 +132,12 @@ class Omchan
 	
 	def updateCache
 		puts '# updating mcache'
+		
+		begin
+			@db.execute('DELETE FROM memory WHERE count <= ?', @forgotten)
+		rescue => e
+			puts '# error: ' + e.to_s
+		end
 		
 		@m.reject! {|mo, count| count <= @forgotten}
 		max_i = 2236
