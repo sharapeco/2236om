@@ -81,7 +81,7 @@ class OmchanEnv
 			next if tw.created_at <= @mtime_m
 			if text = procTweet(tw)
 				puts '[listening...] ' + text
-				@omchan.eat(text, 5)
+				@omchan.eat(text, 10)
 				@omchan.addTask(tw)
 			end
 			mtime = tw.created_at if mtime < tw.created_at
@@ -91,7 +91,7 @@ class OmchanEnv
 	
 	def procTweet(tw)
 		# ignore my tweets
-		return false if tw.user.screen_name == '2236om'
+		return false if tw.user.screen_name == $account['screen_name']
 		
 		text = tw.text.
 			gsub(/[\r\n]+/, ' ').
@@ -230,7 +230,7 @@ class Omchan
 	def chun(tweet = true)
 		words_i = Array.new(1 + rand(5)).map{
 			begin
-				i = Integer(normRand(42, 0))
+				i = Integer(normRand(42, 0)) #人生、宇宙、すべての答え
 			end while i >= @mcache.length
 			i < 0 ? -i : i
 		}.uniq
@@ -244,7 +244,7 @@ class Omchan
 			next if i != words_i[0]
 			words_i.shift
 			
-			r = 1 + rand(4)
+			r = 1 + rand(Integer(8 / mo.split(//u).length))
 			text = (mo + ' ') * r
 			atext << text
 			length += text.split(//u).length
