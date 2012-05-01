@@ -195,6 +195,7 @@ class Omchan
 		end
 		
 		if @learnCount > 2236
+			updateCache
 			@learnCount = 0
 		end
 	end
