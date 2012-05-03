@@ -1,112 +1,9 @@
 # encoding: utf-8
 
 require File.expand_path '../conf', __FILE__
+require File.expand_path '../omchanenv', __FILE__
 require File.expand_path '../normrand', __FILE__
 require 'sqlite3'
-
-# 鸚鵡ちゃんが身を置く環境を再現した素晴らしいクラス
-class OmchanEnv
-	def initialize(omchan)
-		@omchan = omchan
-		@db = @omchan.db
-		@mtime = @omchan.mtime
-		@mtime_m = @omchan.mtime_m
-		
-		i = 0
-		rhy = rand(20)
-		fgt = Integer(normRand(30, 30))
-		upd = 60
-		Thread.start do
-			loop do
-				hear
-				listen if i == 0
-				@omchan.care
-				
-				if rhy == 0
-					@omchan.chun
-					rhy = 40 + rand(20)
-				end
-				rhy -= 1
-				
-				if fgt == 0
-					@omchan.forget
-					fgt = Integer(normRand(30, 30))
-				end
-				fgt -= 1
-				
-				if upd == 0
-					@omchan.updateCache
-					upd = 60
-				end
-				
-				i += 1
-				i = 0 if i == 1
-				
-				sleep 60
-			end
-		end
-	end
-	
-	def hear
-		mtime = @mtime
-		begin
-			tl = Twitter.home_timeline
-		rescue => e
-			puts '# error: ' + e.to_s
-			return
-		end
-		
-		tl.reverse.each do |tw|
-			next if tw.created_at <= @mtime
-			if text = procTweet(tw)
-				puts '[eating...] ' + text
-				@omchan.eat(text)
-			end
-			mtime = tw.created_at if mtime < tw.created_at
-		end
-		@mtime = mtime
-		@db.execute('UPDATE meta SET mtime = ?', @mtime.to_f)
-	end
-	
-	def listen
-		mtime = @mtime_m
-		begin
-			tl = Twitter.mentions
-		rescue => e
-			puts '# error: ' + e.to_s
-			return
-		end
-		
-		tl.reverse.each do |tw|
-			next if tw.created_at <= @mtime_m
-			if text = procTweet(tw)
-				puts '[listening...] ' + text
-				@omchan.eat(text, 10)
-				@omchan.addTask(tw)
-			end
-			mtime = tw.created_at if mtime < tw.created_at
-		end
-		@mtime_m = mtime
-	end
-	
-	def procTweet(tw)
-		# ignore my tweets
-		return false if tw.user.screen_name == $account['screen_name']
-		
-		text = tw.text.
-			gsub(/[\r\n]+/, ' ').
-			gsub(/　/u, ' ').
-			sub(/^RT @\w+:\s*/, '').
-			gsub(/@\w+\s*/, '').
-			gsub(/\s*http:\/\/t\.co\/\w+\s*/, '')
-		# ひらがなかカタカナを含む
-#		if /#{"[#{[0x3040].pack('U')}-#{[0x30ff].pack('U')}]"}/u =~ text
-#			return text
-#		end
-#		return false
-		return text
-	end
-end
 
 # 鸚鵡ちゃん
 class Omchan
@@ -114,8 +11,6 @@ class Omchan
 	attr_reader :db
 
 	def initialize
-		@db = SQLite3::Database.new(dbfile)
-		
 		@mtime = Time.at(0)
 		@mtime_m = Time.at(0)
 		
@@ -145,17 +40,18 @@ class Omchan
 		@mcache = @m.sort{|x, y|
 			y[1] <=> x[1]
 		}[0, max_i].sort{|x, y|
-			evaluate(y[0], y[1]) <=> evaluate(x[0], x[1])
+			evaluate(y[0]) <=> evaluate(x[0])
 		}
+		puts '# update done'
 	end
 	
-	def evaluate(mo, count)
+	def evaluate(mo)
 		unilen = 0
 		a = mo.split(//u)
 		for i in 0..(a.length - 2)
 			unilen += 1 if a[i] != a[i+1]
 		end
-		unilen * ((count - @forgotten) - unilen/5)
+		unilen * ((@m[mo] - @forgotten) - unilen/5)
 	end
 	
 	def forget
@@ -188,12 +84,30 @@ class Omchan
 	end
 	
 	def eat(text, x = 1)
+		@learned = Hash::new
 		atext = text.split(//u)
 		(atext.length).downto(1) do |len|
-			learned = mogmog(atext, len, x)
-			@learnCount += learned * x
+			mogmog(atext, len, x)
 		end
 		
+		oishi = taste(atext)
+		puts oishi.join('|')
+		# eachだとなぜか上手くいかない
+		for i in 0..(oishi.length - 1)
+			mo = oishi[i]
+			val = evaluate(mo)
+			if mo.split(//u).length >= 2 and val > 42
+				puts '++ ' + mo + ' ' + val.to_s
+				@m[mo] += x
+				@learned[mo] = @m[mo]
+			end
+		end
+		
+		@learned.each do |mo, count|
+			memorize(mo, count)
+		end
+		
+		@learnCount += @learned.length * x
 		if @learnCount > 2236
 			updateCache
 			@learnCount = 0
@@ -201,31 +115,81 @@ class Omchan
 	end
 	
 	def mogmog(atext, len, x = 1)
-		learned = Hash::new
 		for i  in 0..(atext.length - len - 2)
 			mo = atext[i, len].join
 			next if /.\s./ =~ mo
 			if len == 1
 				@m[mo] += x if /\s/ !~ mo
 				@m[mo] = @forgotten + 223 if @m[mo] > @forgotten + 223
-				learned[mo] = @m[mo]
+				@learned[mo] = @m[mo]
 			else
 				moprev = atext[i, len - 1].join
 				if len == 2 or @m[moprev] > @forgotten
 					@m[mo] += x
-					learned[mo] = @m[mo]
+					@learned[mo] = @m[mo]
 				end
 			end
 		end
+	end
+	
+	def taste(atext)
+		p = 0
+		psize = 20
+		koreda = []
+		begin
+			sub = atext[p, psize]
+			@kamo = []
+			tasteSub(sub, [])
+			res = tasteEval
+			if res.length > 0
+				res.pop if p < atext.length - psize
+				koreda.concat(res)
+				p += res.join.split(//u).length
+			else
+				p += psize
+			end
+		end while p < atext.length
 		
-		learned.each do |mo, count|
-			begin
-				@db.execute('insert into memory values(?, ?)', mo, count)
-			rescue => e
-				@db.execute('update memory set count = ? where mo = ?', count, mo) if e.to_s ==  'column mo is not unique'
+		koreda
+	end
+	
+	def tasteSub(a, parsed)
+		hit = 0
+		(a.length).downto(1) do |len|
+			sub = a[0, len]
+			rest = a[len..-1]
+			subs = sub.join
+			count = @m[subs] - @forgotten
+			val = sub.length * @m[sub]
+			next if val < 0.8 * hit
+			if count > 0
+				hit = val if hit < val
+				parsed1 = parsed.clone.push(subs)
+				if rest.length > 0
+					tasteSub(a[len..-1], parsed1)
+				else
+					@kamo.push(parsed1)
+				end
 			end
 		end
-		learned.length
+	end
+	
+	def tasteEval
+		best = []
+		bestScore = 1/0.0
+		@kamo.each do |negi|
+			score = 0.0
+			negi.each do |mo|
+				score += 1.0 / (@m[mo] - @forgotten)
+			end
+			score -= negi.join.split(//u).length - negi.length
+			
+			if score < bestScore
+				best = negi
+				bestScore = score
+			end
+		end
+		best
 	end
 	
 	def chun(tweet = true)
@@ -264,6 +228,8 @@ class Omchan
 	end
 	
 	def initdb
+		@db = SQLite3::Database.new(dbfile)
+		
 		sql = "SELECT * FROM sqlite_master WHERE type='table' AND name='meta';"
 		if @db.execute(sql).length == 0
 			@db.execute('CREATE TABLE meta (mtime real, mtime_m real, forgotten int)')
@@ -286,6 +252,14 @@ class Omchan
 		end
 	end
 	
+	def memorize(mo, count)
+		begin
+			@db.execute('insert into memory values(?, ?)', mo, count)
+		rescue => e
+			@db.execute('update memory set count = ? where mo = ?', count, mo) if e.to_s ==  'column mo is not unique'
+		end
+	end
+	
 	def view(threshold = 0, len = 1)
 		@m.sort{|x, y|
 			x[1] <=> y[1]
@@ -298,7 +272,7 @@ class Omchan
 	def viewCache
 		i = 1
 		@mcache[0, 128].each do |mo, count|
-			printf "%3d. %5d  %s\n", i, evaluate(mo, count), mo
+			printf "%3d. %5d  %s\n", i, evaluate(mo), mo
 			i += 1
 		end
 	end
