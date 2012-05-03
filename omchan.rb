@@ -85,6 +85,7 @@ class Omchan
 	
 	def eat(text, x = 1)
 		@learned = Hash::new
+		
 		atext = text.split(//u)
 		(atext.length).downto(1) do |len|
 			mogmog(atext, len, x)
@@ -98,7 +99,7 @@ class Omchan
 			val = evaluate(mo)
 			if mo.split(//u).length >= 2 and val > 42
 				puts '++ ' + mo + ' ' + val.to_s
-				@m[mo] += x
+				@m[mo] += x * 2
 				@learned[mo] = @m[mo]
 			end
 		end
@@ -117,7 +118,7 @@ class Omchan
 	def mogmog(atext, len, x = 1)
 		for i  in 0..(atext.length - len - 2)
 			mo = atext[i, len].join
-			next if /.\s./ =~ mo
+			next if /\s/u =~ mo
 			if len == 1
 				@m[mo] += x if /\s/ !~ mo
 				@m[mo] = @forgotten + 223 if @m[mo] > @forgotten + 223
@@ -160,7 +161,7 @@ class Omchan
 			rest = a[len..-1]
 			subs = sub.join
 			count = @m[subs] - @forgotten
-			val = sub.length * @m[sub]
+			val = evaluate(subs)
 			next if val < 0.8 * hit
 			if count > 0
 				hit = val if hit < val
@@ -180,7 +181,7 @@ class Omchan
 		@kamo.each do |negi|
 			score = 0.0
 			negi.each do |mo|
-				score += 1.0 / (@m[mo] - @forgotten)
+				score += 2.236 / (@m[mo] - @forgotten)
 			end
 			score -= negi.join.split(//u).length - negi.length
 			
@@ -195,7 +196,7 @@ class Omchan
 	def chun(tweet = true)
 		words_i = Array.new(1 + rand(5)).map{
 			begin
-				i = Integer(normRand(42, 0)) #人生、宇宙、すべての答え
+				i = Integer(normRand(50, 0))
 			end while i >= @mcache.length
 			i < 0 ? -i : i
 		}.uniq
