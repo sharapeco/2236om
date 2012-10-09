@@ -10,7 +10,7 @@ class OmchanEnv
 		
 		i = 0
 		rhy = rand(20)
-		fgt = Integer(normRand(30, 30))
+		fgt = Integer(normRand(30, 42))
 		upd = 60
 		Thread.start do
 			loop do
@@ -26,7 +26,7 @@ class OmchanEnv
 				
 				if fgt == 0
 					@omchan.forget
-					fgt = Integer(normRand(30, 30))
+					fgt = Integer(normRand(30, 42))
 				end
 				fgt -= 1
 				

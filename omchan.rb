@@ -51,7 +51,7 @@ class Omchan
 		for i in 0..(a.length - 2)
 			unilen += 1 if a[i] != a[i+1]
 		end
-		unilen * ((@m[mo] - @forgotten) - unilen/5)
+		unilen * (Math.log(@m[mo] - @forgotten) - unilen/5)
 	end
 	
 	def forget
@@ -91,16 +91,34 @@ class Omchan
 			mogmog(atext, len, x)
 		end
 		
-		oishi = taste(atext)
+		# どうやら単語らしい部分文字列を見つける
+		oishi = []
+		text.split(/\s+/u).each do |subtext|
+			ret = taste(subtext.split(//u))
+			oishi.concat(ret) if ret.length > 0
+		end
+		
+		# どうやら単語らしい部分文字列を過剰に学習する
 		puts oishi.join('|')
-		# eachだとなぜか上手くいかない
-		for i in 0..(oishi.length - 1)
-			mo = oishi[i]
+		oishi.each do |mo|
 			val = evaluate(mo)
-			if mo.split(//u).length >= 2 and val > 42
+			amo = mo.split(//u)
+			if amo.length >= 2 and val > 8
 				puts '++ ' + mo + ' ' + val.to_s
 				@m[mo] += x * 2
 				@learned[mo] = @m[mo]
+			end
+			
+			# 単語の部分文字列は捨てていく
+			if amo.length >= 3 and val > 8
+				for sublen in 2..(amo.length - 1)
+					for i in 0..(amo.length - sublen)
+						mos = amo[i, sublen].join
+						@m[mos] -= x
+						@learned[mos] = @m[mos]
+						puts '-- ' + mos
+					end
+				end
 			end
 		end
 		
