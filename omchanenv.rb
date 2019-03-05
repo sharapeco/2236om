@@ -8,6 +8,13 @@ class OmchanEnv
 		@mtime = @omchan.mtime
 		@mtime_m = @omchan.mtime_m
 		
+		@client = Twitter::REST::Client.new do |config|
+			config.consumer_key = $account['consumer_key']
+			config.consumer_secret = $account['consumer_secret']
+			config.access_token = $account['oauth_token']
+			config.access_token_secret = $account['oauth_token_secret']
+		end
+		
 		i = 0
 		rhy = rand(20)
 		fgt = Integer(normRand(30, 42))
@@ -16,10 +23,24 @@ class OmchanEnv
 			loop do
 				hear
 				listen if i == 0
-				@omchan.care
+				tweetText, replyToId = @omchan.care
+				if tweetText
+					puts '> ' + tweetText
+					begin
+						@client.update(tweetText, :in_reply_to_status_id => replyToId)
+					end
+				end
 				
 				if rhy == 0
-					@omchan.chun
+					tweetText = @omchan.chun
+					if tweetText
+						puts '> ' + tweetText
+						begin
+							@client.update(tweetText)
+						rescue => e
+							puts '# error: ' + e.to_s
+						end
+					end
 					rhy = 40 + rand(20)
 				end
 				rhy -= 1
@@ -46,7 +67,7 @@ class OmchanEnv
 	def hear
 		mtime = @mtime
 		begin
-			tl = Twitter.home_timeline
+			tl = @client.home_timeline
 		rescue => e
 			puts '# error: ' + e.to_s
 			return
@@ -54,6 +75,7 @@ class OmchanEnv
 		
 		tl.reverse.each do |tw|
 			next if tw.created_at <= @mtime
+			next if tw.retweeted_status
 			if tw.text.index('@' + $account['screen_name']).nil? and text = procTweet(tw)
 				puts '[eating...] ' + tw.user.screen_name + ': ' + text
 				@omchan.eat(text)
@@ -67,7 +89,7 @@ class OmchanEnv
 	def listen
 		mtime = @mtime_m
 		begin
-			tl = Twitter.mentions
+			tl = @client.mentions_timeline
 		rescue => e
 			puts '# error: ' + e.to_s
 			return
@@ -83,6 +105,18 @@ class OmchanEnv
 			mtime = tw.created_at if mtime < tw.created_at
 		end
 		@mtime_m = mtime
+	end
+	
+	def chunForce
+		tweetText = @omchan.chun
+		if tweetText
+			puts '> ' + tweetText
+			begin
+				@client.update(tweetText)
+			rescue => e
+				puts '# error: ' + e.to_s
+			end
+		end
 	end
 	
 	def procTweet(tw)

@@ -73,14 +73,15 @@ class Omchan
 			tw = @tasks.shift
 			@mtime_m = tw.created_at
 			puts '[doing...] ' + tw.id.to_s + ' ' + tw.text
-			text = chun(false)
+			text = chun
 			begin
 				@db.execute('UPDATE meta SET mtime_m = ?', @mtime_m.to_f)
-				Twitter.update('@' + tw.user.screen_name + ' ' + text, :in_reply_to_status_id => tw.id)
+				return ['@' + tw.user.screen_name + ' ' + text, tw.id]
 			rescue => e
 				puts '# error: ' + e.to_s
 			end
 		end
+		[nil, nil]
 	end
 	
 	def eat(text, x = 1)
@@ -211,7 +212,7 @@ class Omchan
 		best
 	end
 	
-	def chun(tweet = true)
+	def chun
 		words_i = Array.new(1 + rand(5)).map{
 			begin
 				i = Integer(normRand(50, 0))
@@ -237,12 +238,7 @@ class Omchan
 		
 		text = atext.sort_by{rand}.join
 		text = text.gsub(/^\s+|\s+$/, '').split(//u)[0, 100].join
-		puts '> ' + text
-		begin
-			Twitter.update(text) if text.length != 0 and tweet
-		rescue => e
-			puts '# error: ' + e.to_s
-		end
+		return nil if text.length == 0
 		text
 	end
 	
@@ -318,8 +314,8 @@ class OmchanApp
 			loop do
 				c = STDIN.getc
 				break if c == ?q
-				@omchan.chun(false) if c == ?t # only print
-				@omchan.chun if c == ?u
+				puts '> ' + @omchan.chun if c == ?t # only print
+				@env.chunForce if c == ?u
 				@omchan.viewTasks if c == ?v
 				@omchan.viewCache if c == ?c
 				@omchan.view(10*a, len) if c == ?1
