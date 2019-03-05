@@ -1,5 +1,7 @@
 # encoding: utf-8
 
+require 'twitter'
+
 # 鸚鵡ちゃんが身を置く環境を再現した素晴らしいクラス
 class OmchanEnv
 	def initialize(omchan)
