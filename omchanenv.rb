@@ -1,5 +1,6 @@
 # encoding: utf-8
 
+require 'bundler/setup'
 require 'twitter'
 
 # 鸚鵡ちゃんが身を置く環境を再現した素晴らしいクラス
