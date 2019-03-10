@@ -1,7 +1,7 @@
 # encoding: utf-8
 
-require File.expand_path '../omchan', __FILE__
-require File.expand_path '../omchanenv', __FILE__
+require_relative 'omchan'
+require_relative 'omchanenv'
 
 # 鳥かご
 class OmchanApp

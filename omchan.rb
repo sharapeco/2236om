@@ -2,9 +2,8 @@
 
 require 'bundler/setup'
 require 'sqlite3'
-
-require File.expand_path '../conf', __FILE__
-require File.expand_path '../normrand', __FILE__
+require_relative 'conf'
+require_relative 'normrand'
 
 # 鸚鵡ちゃん
 class Omchan
