@@ -65,10 +65,10 @@ class ScheduledOmchan
 		reply
 		
 		# 自発的にしゃべる
-		chun if rand(60) >= 40
+		chun if rand(60) < 3
 			
 		# 聞いた内容を忘れる
-		@omchan.forget if rand(42) >= 41
+		@omchan.forget if rand(42) < 1
 	end
 	
 	def hear
