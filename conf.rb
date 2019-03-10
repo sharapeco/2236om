@@ -5,6 +5,8 @@ require 'bundler/setup'
 require 'pit'
 require 'pp'
 
+ENV['TZ'] = 'Asia/Tokyo'
+
 $account = Pit.get('2236om', :require => {
 	'screen_name' => 'Twitter screen name',
 	'consumer_key' => 'Twitter application consumer key',
