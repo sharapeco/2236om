@@ -69,19 +69,15 @@ class Omchan
 	end
 	
 	def care
-		if @tasks.length != 0
-			tw = @tasks.shift
-			@mtime_m = tw.created_at
-			puts '[doing...] ' + tw.id.to_s + ' ' + tw.text
-			text = chun
-			begin
-				@db.execute('UPDATE meta SET mtime_m = ?', @mtime_m.to_f)
-				return ['@' + tw.user.screen_name + ' ' + text, tw.id]
-			rescue => e
-				puts '# error: ' + e.to_s
-			end
+		if @tasks.length == 0
+			return [nil, nil]
 		end
-		[nil, nil]
+		
+		tw = @tasks.shift
+		@mtime_m = tw.created_at
+		puts '[doing...] ' + tw.id.to_s + ' ' + tw.text
+		text = chun
+		return ['@' + tw.user.screen_name + ' ' + text, tw.id]
 	end
 	
 	def eat(text, x = 1)

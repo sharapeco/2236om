@@ -58,11 +58,8 @@ class ScheduledOmchan
 		# Home timeline を聞く
 		hear if now.min % 3 == 2
 		
-		# Mentions を聞く
+		# Mentions があれば1件のみ聞き、返信する
 		listen
-		
-		# Reply を1件する
-		reply
 		
 		# 自発的にしゃべる
 		chun if rand(180) < 3
@@ -72,7 +69,6 @@ class ScheduledOmchan
 	end
 	
 	def hear
-		mtime = @mtime
 		begin
 			tl = @client.home_timeline
 		rescue => e
@@ -80,21 +76,27 @@ class ScheduledOmchan
 			return
 		end
 		
-		tl.reverse.each do |tw|
-			next if tw.created_at <= @mtime
-			next if tw.retweeted_status
-			if tw.text.index('@' + $account['screen_name']).nil? and text = procTweet(tw)
-				# puts '[eating...] ' + tw.user.screen_name + ': ' + text
-				@omchan.eat(text)
-			end
+		mtime = @mtime
+		tl.select {|tw| tw.created_at > @mtime}
+		.select {|tw| !tw.retweeted_status}
+		.reverse
+		.select {|tw| tw.text.index('@' + $account['screen_name']).nil?}
+		.map {|tw| [tw, procTweet(tw)]}
+		.each {|tw, text|
+			@omchan.eat(text)
 			mtime = tw.created_at if mtime < tw.created_at
-		end
+		}
+
 		@mtime = mtime
-		@db.execute('UPDATE meta SET mtime = ?', @mtime.to_f)
+		begin
+			@db.execute('UPDATE meta SET mtime = ?', @mtime.to_f)
+		rescue => e
+			puts '# error: ' + e.to_s
+			return
+		end
 	end
 	
 	def listen
-		mtime = @mtime_m
 		begin
 			tl = @client.mentions_timeline
 		rescue => e
@@ -102,16 +104,24 @@ class ScheduledOmchan
 			return
 		end
 		
-		tl.reverse.each do |tw|
-			next if tw.created_at <= @mtime_m
-			if text = procTweet(tw)
-				# puts '[listening...] ' + tw.user.screen_name + ': ' + text
-				@omchan.eat(text, 10)
-				@omchan.addTask(tw)
-			end
+		mtime = @mtime_m
+		tl.select {|tw| tw.created_at > @mtime_m}
+		.reverse
+		.map {|tw| [tw, procTweet(tw)]}
+		.slice(0, 1)
+		.each {|tw, text|
+			@omchan.eat(text, 10)
+			@omchan.addTask(tw)
+			reply
 			mtime = tw.created_at if mtime < tw.created_at
-		end
+		}
+
 		@mtime_m = mtime
+		begin
+			@db.execute('UPDATE meta SET mtime_m = ?', @mtime_m.to_f)
+		rescue => e
+			puts '# error: ' + e.to_s
+		end
 	end
 	
 	def chun
