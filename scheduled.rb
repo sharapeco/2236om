@@ -156,7 +156,7 @@ class ScheduledOmchan
 			gsub(/　/u, ' ').
 			sub(/^RT @\w+:\s*/, '').
 			gsub(/@\w+\s*/, '').
-			gsub(/\s*http:\/\/t\.co\/\w+\s*/, '')
+			gsub(/\s*https?:\/\/t\.co\/\w+\s*/, '')
 		# ひらがなかカタカナを含む
 #		if /#{"[#{[0x3040].pack('U')}-#{[0x30ff].pack('U')}]"}/u =~ text
 #			return text
