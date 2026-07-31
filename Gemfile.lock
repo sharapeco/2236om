@@ -18,12 +18,14 @@ GEM
     http_parser.rb (0.6.0)
     memoizable (0.4.2)
       thread_safe (~> 0.3, >= 0.3.1)
+    mini_portile2 (2.8.9)
     multipart-post (2.0.0)
     naught (1.1.0)
     pit (0.0.7)
     public_suffix (7.0.5)
     simple_oauth (0.3.1)
-    sqlite3 (1.4.0)
+    sqlite3 (2.9.5)
+      mini_portile2 (~> 2.8.0)
     thread_safe (0.3.6)
     twitter (6.2.0)
       addressable (~> 2.3)
@@ -45,7 +47,7 @@ PLATFORMS
 
 DEPENDENCIES
   pit (= 0.0.7)
-  sqlite3 (= 1.4.0)
+  sqlite3 (= 2.9.5)
   twitter (= 6.2.0)
 
 BUNDLED WITH
